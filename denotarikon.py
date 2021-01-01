@@ -5,13 +5,7 @@ import numpy as np
 import string
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 
-# TODO: move to config.py
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')  # TODO: parameter use_cuda
-tokenizer = GPT2Tokenizer.from_pretrained('gpt2', add_prefix_space=True)
-model = GPT2LMHeadModel.from_pretrained('gpt2').train(False).to(device)
-
-
-
+from .parser import get_args
 
 def letter_index(letter, alphabet=string.ascii_lowercase):
     return alphabet.index(letter)
@@ -38,6 +32,7 @@ assert test_tokens == [' star', '-', 'like'], "Settings of tokenizer have change
 assert list(map(is_starting, test_tokens)) == [True, False, False]
 assert list(map(is_continuing, test_tokens)) == [False, True, True]
 assert not is_starting('\n') and not is_continuing('\n')
+del test_tokens
 
 
 def get_masks(tokenizer, alphabet=string.ascii_lowercase):
@@ -55,21 +50,6 @@ def get_masks(tokenizer, alphabet=string.ascii_lowercase):
     return mask_allowed, mask_starting
 
 
-# TODO: use argparse
-start_text = "The best possible example to demonstrate power of the project is"
-target = "TBPETDPOTPITREEBPORT"
-# Parameter for nucleus sampling
-p_threshold = 0.95
-# Allow model to generate only this many tokens that counts as one word.
-max_nostarting_token = 5
-
-temperature = 0.8
-
-
-start_tokens = tokenizer.encode(start_text)
-
-
-target = target.lower()
 def target_letters_covered(target, start_tokens, tokenizer):
     assert target != '', "Target string cannot be empty"
 
@@ -85,7 +65,8 @@ def target_letters_covered(target, start_tokens, tokenizer):
     return target_letter_generated
 
 
-def generate(target, start_tokens, model, tokenizer, device=device):
+def generate(target, start_tokens, model, tokenizer,
+             device='cpu', p_threshold=0.95, max_nostarting_token=5, temperature=1.0):
     tokens = start_tokens.copy()
     with torch.no_grad():
         mask_allowed, mask_starting = get_masks(tokenizer)
@@ -125,6 +106,19 @@ def generate(target, start_tokens, model, tokenizer, device=device):
     return tokens
 
 
-tokens = generate(target, start_tokens, model, tokenizer)
-print(tokenizer.decode(tokens))
+
+if __name__ == '__main__':
+    args = get_args()
+
+    # TODO: move to config.py
+    device = torch.device('cuda' if torch.cuda.is_available() and args.use_cuda else 'cpu')
+    tokenizer = GPT2Tokenizer.from_pretrained('gpt2', add_prefix_space=True)
+    model = GPT2LMHeadModel.from_pretrained('gpt2').train(False).to(device)
+
+    start_tokens = tokenizer.encode(args.initial)
+    target = args.abbrev.lower()
+
+    tokens = generate(target, start_tokens, model, tokenizer,
+                      device=device, p_threshold=args.threshold, max_nostarting_token=args.max_tokens, temperature=args.temperature)
+    print(tokenizer.decode(tokens))
 
