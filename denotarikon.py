@@ -90,6 +90,7 @@ def generate(target, start_tokens, model, tokenizer, device=device):
     with torch.no_grad():
         mask_allowed, mask_starting = get_masks(tokenizer)
         target_letter_generated = target_letters_covered(target, start_tokens, tokenizer)
+        # FIXME: this line fails when `tokens == []`
         result = model(torch.tensor(tokens, device=device)[None], past_key_values=None)
         next_logits, past = result['logits'][0, -1, :], result['past_key_values']
         rest_nostarting_tokens = max_nostarting_token
