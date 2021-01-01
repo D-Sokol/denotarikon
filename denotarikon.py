@@ -75,7 +75,7 @@ assert target != '', "Target string cannot be empty"
 target_letter_generated = 0
 for ix in start_tokens:
     token = tokenizer.decode(ix)
-    if is_starting(token):
+    if not is_starting(token):
         continue
 
     assert target_letter_generated != len(target), "Target string is too short"
