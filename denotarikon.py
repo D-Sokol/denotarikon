@@ -40,18 +40,19 @@ assert list(map(is_continuing, test_tokens)) == [False, True, True]
 assert not is_starting('\n') and not is_continuing('\n')
 
 
-# TODO: function
-all_tokens = [tokenizer.decode(i) for i in range(tokenizer.vocab_size)]
-mask_allowed = torch.zeros(tokenizer.vocab_size, len(string.ascii_lowercase), dtype=bool)
-mask_starting = torch.zeros(tokenizer.vocab_size, dtype=bool)
-for token, mask_row_a, mask_row_s in zip(all_tokens, mask_allowed, mask_starting):
-    if is_starting(token):
-        mask_row_a[letter_index(token[1].lower())] = True
-        # Plain assignment or `mask_row_s[:] = True` are not applicable to scalars,
-        #  thus I use operator |=, which works just like inplace assignment.
-        mask_row_s |= True
-    elif is_continuing(token):
-        mask_row_a[:] = True
+def get_masks(tokenizer, alphabet=string.ascii_lowercase):
+    all_tokens = [tokenizer.decode(i) for i in range(tokenizer.vocab_size)]
+    mask_allowed = torch.zeros(tokenizer.vocab_size, len(alphabet), dtype=bool)
+    mask_starting = torch.zeros(tokenizer.vocab_size, dtype=bool)
+    for token, mask_row_a, mask_row_s in zip(all_tokens, mask_allowed, mask_starting):
+        if is_starting(token):
+            mask_row_a[letter_index(token[1].lower())] = True
+            # Plain assignment or `mask_row_s[:] = True` are not applicable to scalars,
+            #  thus I use operator |=, which works just like inplace assignment.
+            mask_row_s |= True
+        elif is_continuing(token):
+            mask_row_a[:] = True
+    return mask_allowed, mask_starting
 
 
 # TODO: use argparse
@@ -68,56 +69,61 @@ temperature = 0.8
 start_tokens = tokenizer.encode(start_text)
 
 
-# TODO: function
 target = target.lower()
-assert target != '', "Target string cannot be empty"
+def target_letters_covered(target, start_tokens, tokenizer):
+    assert target != '', "Target string cannot be empty"
 
-target_letter_generated = 0
-for ix in start_tokens:
-    token = tokenizer.decode(ix)
-    if not is_starting(token):
-        continue
+    target_letter_generated = 0
+    for ix in start_tokens:
+        token = tokenizer.decode(ix)
+        if not is_starting(token):
+            continue
 
-    assert target_letter_generated != len(target), "Target string is too short"
-    assert target[target_letter_generated].upper() == token[1].upper(), "Target string does not correspond given phrase"
-    target_letter_generated += 1
-
-
-# TODO: function
-tokens = start_tokens.copy()
-with torch.no_grad():
-    result = model(torch.tensor(tokens, device=device)[None], past_key_values=None)
-    next_logits, past = result['logits'][0, -1, :], result['past_key_values']
-    rest_nostarting_tokens = max_nostarting_token
-
-    while target_letter_generated < len(target):
-        if rest_nostarting_tokens:
-            next_logits[~mask_allowed[:, letter_index(target[target_letter_generated])]] = -np.inf
-        else:
-            next_logits[~mask_starting] = -np.inf
-        next_probas = torch.softmax(next_logits / temperature, dim=-1).cpu()
-
-        sorted_p, sorted_ix = torch.sort(next_probas, descending=True)
-        cumulative_p = torch.cumsum(sorted_p, dim=-1)
-
-        # Number of possible choices for next token, calculated as minimal n
-        #  such that sum of probabilities of the first n tokens exceeds p_threshold
-        n_tokens_next = np.argmax(cumulative_p.numpy() > p_threshold) + 1
-
-        sorted_p = sorted_p[:n_tokens_next]
-        sorted_p /= cumulative_p[n_tokens_next-1]
-        ix_ix = np.random.choice(n_tokens_next, p=sorted_p.numpy())
-        next_ix = sorted_ix[ix_ix]
-        tokens.append(next_ix.item())
-        if mask_starting[next_ix]:
-            target_letter_generated += 1
-            rest_nostarting_tokens = max_nostarting_token
-        else:
-            rest_nostarting_tokens -= 1
-
-        result = model(next_ix[None].to(device), past_key_values=past)
-        next_logits, past = result['logits'][0, :], result['past_key_values']
+        assert target_letter_generated != len(target), "Target string is too short"
+        assert target[target_letter_generated].upper() == token[1].upper(), "Target string does not correspond given phrase"
+        target_letter_generated += 1
+    return target_letter_generated
 
 
+def generate(target, start_tokens, model, tokenizer, device=device):
+    tokens = start_tokens.copy()
+    with torch.no_grad():
+        mask_allowed, mask_starting = get_masks(tokenizer)
+        target_letter_generated = target_letters_covered(target, start_tokens, tokenizer)
+        result = model(torch.tensor(tokens, device=device)[None], past_key_values=None)
+        next_logits, past = result['logits'][0, -1, :], result['past_key_values']
+        rest_nostarting_tokens = max_nostarting_token
+
+        while target_letter_generated < len(target):
+            if rest_nostarting_tokens:
+                next_logits[~mask_allowed[:, letter_index(target[target_letter_generated])]] = -np.inf
+            else:
+                next_logits[~mask_starting] = -np.inf
+            next_probas = torch.softmax(next_logits / temperature, dim=-1).cpu()
+
+            sorted_p, sorted_ix = torch.sort(next_probas, descending=True)
+            cumulative_p = torch.cumsum(sorted_p, dim=-1)
+
+            # Number of possible choices for next token, calculated as minimal n
+            #  such that sum of probabilities of the first n tokens exceeds p_threshold
+            n_tokens_next = np.argmax(cumulative_p.numpy() > p_threshold) + 1
+
+            sorted_p = sorted_p[:n_tokens_next]
+            sorted_p /= cumulative_p[n_tokens_next-1]
+            ix_ix = np.random.choice(n_tokens_next, p=sorted_p.numpy())
+            next_ix = sorted_ix[ix_ix]
+            tokens.append(next_ix.item())
+            if mask_starting[next_ix]:
+                target_letter_generated += 1
+                rest_nostarting_tokens = max_nostarting_token
+            else:
+                rest_nostarting_tokens -= 1
+
+            result = model(next_ix[None].to(device), past_key_values=past)
+            next_logits, past = result['logits'][0, :], result['past_key_values']
+    return tokens
+
+
+tokens = generate(target, start_tokens, model, tokenizer)
 print(tokenizer.decode(tokens))
 
