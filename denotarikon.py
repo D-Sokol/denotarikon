@@ -26,16 +26,6 @@ def is_continuing(token, alphabet=string.ascii_lowercase):
     return token and not token[0].isspace() and (token[0] in alphabet or token[0].lower() not in alphabet)
 
 
-# TODO: move to tests.py
-test_tokens = [tokenizer.decode(ix) for ix in tokenizer.encode('star-like')]
-assert test_tokens == [' star', '-', 'like'], "Settings of tokenizer have changed"
-
-assert list(map(is_starting, test_tokens)) == [True, False, False]
-assert list(map(is_continuing, test_tokens)) == [False, True, True]
-assert not is_starting('\n') and not is_continuing('\n')
-del test_tokens
-
-
 def get_masks(tokenizer, alphabet=string.ascii_lowercase):
     all_tokens = [tokenizer.decode(i) for i in range(tokenizer.vocab_size)]
     mask_allowed = torch.zeros(tokenizer.vocab_size, len(alphabet), dtype=bool)
