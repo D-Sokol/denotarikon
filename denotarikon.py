@@ -5,7 +5,8 @@ import numpy as np
 import string
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 
-from .parser import get_args
+from parser import get_args
+
 
 def letter_index(letter, alphabet=string.ascii_lowercase):
     return alphabet.index(letter)
