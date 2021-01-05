@@ -52,7 +52,8 @@ def target_letters_covered(target, start_tokens, tokenizer):
     chars_allowed = set(string.ascii_letters)
     chars_given = set(target)
     if not chars_given.issubset(chars_allowed):
-        raise IncorrectInput("Target string cannot contain following symbols: " + ",".join(chars_given - chars_allowed))
+        # The second term produces something like " '1','&',' ' ".
+        raise IncorrectInput("Target string cannot contain following symbols: " + ",".join(map(repr, chars_given - chars_allowed)))
 
     target_letter_generated = 0
     for ix in start_tokens:
