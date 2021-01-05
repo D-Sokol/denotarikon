@@ -58,6 +58,7 @@ def target_letters_covered(target, start_tokens, tokenizer):
 
 def generate(target, start_tokens, model, tokenizer,
              device='cpu', p_threshold=0.95, max_nostarting_token=5, temperature=1.0):
+    target = target.lower()
     tokens = start_tokens.copy()
     with torch.no_grad():
         mask_allowed, mask_starting = get_masks(tokenizer)
@@ -106,9 +107,8 @@ if __name__ == '__main__':
     model = GPT2LMHeadModel.from_pretrained('gpt2').train(False).to(device)
 
     start_tokens = tokenizer.encode(args.initial)
-    target = args.abbrev.lower()
 
-    tokens = generate(target, start_tokens, model, tokenizer,
+    tokens = generate(args.abbrev, start_tokens, model, tokenizer,
                       device=device, p_threshold=args.threshold, max_nostarting_token=args.max_tokens, temperature=args.temperature)
     print(tokenizer.decode(tokens))
 
