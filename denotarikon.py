@@ -68,9 +68,8 @@ def generate(target, start_tokens, model, tokenizer,
         rest_nostarting_tokens = max_nostarting_token
 
         while target_letter_generated < len(target):
-            if rest_nostarting_tokens:
-                next_logits[~mask_allowed[:, letter_index(target[target_letter_generated])]] = -np.inf
-            else:
+            next_logits[~mask_allowed[:, letter_index(target[target_letter_generated])]] = -np.inf
+            if not rest_nostarting_tokens:
                 next_logits[~mask_starting] = -np.inf
             next_probas = torch.softmax(next_logits / temperature, dim=-1).cpu()
 
