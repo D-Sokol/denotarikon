@@ -66,9 +66,10 @@ def generate(target, start_tokens, model, tokenizer,
         if start_tokens:
             result = model(torch.tensor(tokens, device=device)[None], past_key_values=None)
             next_logits, past = result['logits'][0, -1, :], result['past_key_values']
+            rest_nostarting_tokens = max_nostarting_token
         else:
             next_logits, past = torch.zeros(tokenizer.vocab_size), None
-        rest_nostarting_tokens = max_nostarting_token
+            rest_nostarting_tokens = 0
 
         while target_letter_generated < len(target):
             next_logits[~mask_allowed[:, letter_index(target[target_letter_generated])]] = -np.inf
