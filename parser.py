@@ -12,6 +12,7 @@ def get_args(args=None):
 
     device_group = parser.add_argument_group(title='Devices', description='Settings affectnig the devices used for text generation')
     device_group.add_argument('--no-cuda', '--no-gpu', default=True, action='store_false', help='Do not use GPU', dest='use_cuda')
+    device_group.add_argument('--directory', type=str, default=None, help='Path to a directory containing model weights or where weights should be saved. If not provided, weights are not cached')
 
     return parser.parse_args(args)
 
