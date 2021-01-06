@@ -3,6 +3,7 @@
 import torch
 import numpy as np
 import string
+import sys
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 
 from parser import get_args
@@ -129,6 +130,6 @@ if __name__ == '__main__':
                           device=device, p_threshold=args.threshold, max_nostarting_token=args.max_tokens, temperature=args.temperature)
         print(tokenizer.decode(tokens))
     except IncorrectInput as err:
-        print(err)
+        print(sys.argv[0] + ":", err, file=sys.stderr)
         exit(1)
 
