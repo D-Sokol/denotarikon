@@ -3,9 +3,14 @@
 import torch
 import numpy as np
 import string
+import sys
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 
 from parser import get_args
+
+
+class IncorrectInput(ValueError):
+    pass
 
 
 def letter_index(letter, alphabet=string.ascii_lowercase):
@@ -42,7 +47,14 @@ def get_masks(tokenizer, alphabet=string.ascii_lowercase):
 
 
 def target_letters_covered(target, start_tokens, tokenizer):
-    assert target != '', "Target string cannot be empty"
+    if not target:
+        raise IncorrectInput("Target string cannot be empty")
+
+    chars_allowed = set(string.ascii_letters)
+    chars_given = set(target)
+    if not chars_given.issubset(chars_allowed):
+        # The second term produces something like " '1','&',' ' ".
+        raise IncorrectInput("Target string cannot contain following symbols: " + ",".join(map(repr, chars_given - chars_allowed)))
 
     target_letter_generated = 0
     for ix in start_tokens:
@@ -50,8 +62,10 @@ def target_letters_covered(target, start_tokens, tokenizer):
         if not is_starting(token):
             continue
 
-        assert target_letter_generated != len(target), "Target string is too short"
-        assert target[target_letter_generated].upper() == token[1].upper(), "Target string does not correspond given phrase"
+        if target_letter_generated == len(target):
+            raise IncorrectInput("Initial phrase is too long to match the target")
+        if target[target_letter_generated].lower() != token[1].lower():
+            raise IncorrectInput("Initial phrase does not match the target")
         target_letter_generated += 1
     return target_letter_generated
 
@@ -109,9 +123,13 @@ if __name__ == '__main__':
     tokenizer = GPT2Tokenizer.from_pretrained('gpt2', add_prefix_space=True)
     model = GPT2LMHeadModel.from_pretrained('gpt2').train(False).to(device)
 
-    start_tokens = tokenizer.encode(args.initial)
+    try:
+        start_tokens = tokenizer.encode(args.initial)
 
-    tokens = generate(args.abbrev, start_tokens, model, tokenizer,
-                      device=device, p_threshold=args.threshold, max_nostarting_token=args.max_tokens, temperature=args.temperature)
-    print(tokenizer.decode(tokens))
+        tokens = generate(args.abbrev, start_tokens, model, tokenizer,
+                          device=device, p_threshold=args.threshold, max_nostarting_token=args.max_tokens, temperature=args.temperature)
+        print(tokenizer.decode(tokens))
+    except IncorrectInput as err:
+        print(sys.argv[0] + ":", err, file=sys.stderr)
+        exit(1)
 
