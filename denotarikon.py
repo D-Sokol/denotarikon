@@ -4,13 +4,10 @@ import torch
 import numpy as np
 import string
 import sys
-from transformers import GPT2Tokenizer, GPT2LMHeadModel
 
+from exceptions import IncorrectInput
+from model import get_model
 from parser import get_args
-
-
-class IncorrectInput(ValueError):
-    pass
 
 
 def letter_index(letter, alphabet=string.ascii_lowercase):
@@ -118,10 +115,9 @@ def generate(target, start_tokens, model, tokenizer,
 if __name__ == '__main__':
     args = get_args()
 
-    # TODO: move to config.py
     device = torch.device('cuda' if torch.cuda.is_available() and args.use_cuda else 'cpu')
-    tokenizer = GPT2Tokenizer.from_pretrained('gpt2', add_prefix_space=True)
-    model = GPT2LMHeadModel.from_pretrained('gpt2').train(False).to(device)
+    tokenizer, model = get_model(args.directory)
+    model.to(device)
 
     try:
         start_tokens = tokenizer.encode(args.initial)
