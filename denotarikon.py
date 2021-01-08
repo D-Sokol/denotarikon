@@ -122,9 +122,12 @@ if __name__ == '__main__':
     try:
         start_tokens = tokenizer.encode(args.initial)
 
-        tokens = generate(args.abbrev, start_tokens, model, tokenizer,
-                          device=device, p_threshold=args.threshold, max_nostarting_token=args.max_tokens, temperature=args.temperature)
-        print(tokenizer.decode(tokens))
+        for i in range(args.repeats):
+            tokens = generate(args.abbrev, start_tokens, model, tokenizer,
+                              device=device, p_threshold=args.threshold, max_nostarting_token=args.max_tokens, temperature=args.temperature)
+            print(tokenizer.decode(tokens))
+            if i != args.repeats - 1:
+                print('=' * 20)
     except IncorrectInput as err:
         print(sys.argv[0] + ":", err, file=sys.stderr)
         exit(1)

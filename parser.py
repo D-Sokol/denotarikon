@@ -6,6 +6,7 @@ def get_args(args=None):
     parser.add_argument('initial', nargs='?', default='', help='start generation from this phrase')
 
     model_group = parser.add_argument_group(title='Model', description='Settings affecting the text generation process')
+    model_group.add_argument('-n', '--number', type=int, default=1, help='Number of candidates to generate', dest='repeats')
     model_group.add_argument('--threshold', type=float, default=0.95, metavar='P', help='Probability threshold for nucleus sampling')
     model_group.add_argument('--temperature', type=float, default=1.0, metavar='TEMP')
     model_group.add_argument('--max-tokens', type=int, default=5, help='Maximum number of *tokens* allowed per one letter')
