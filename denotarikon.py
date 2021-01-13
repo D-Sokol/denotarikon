@@ -40,6 +40,7 @@ def get_masks(tokenizer, alphabet=string.ascii_lowercase):
             mask_row_s |= True
         elif is_continuing(token):
             mask_row_a[:] = True
+    mask_allowed[tokenizer.all_special_ids] = False
     return mask_allowed, mask_starting
 
 
