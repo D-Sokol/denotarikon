@@ -1,34 +1,36 @@
 #!/usr/bin/env python3
 
 import torch
+from torch import Tensor
+from typing import List, Tuple
 import numpy as np
 import string
 import sys
 
 from exceptions import IncorrectInput
-from model import get_model
+from model import get_model, PreTrainedModel, PreTrainedTokenizer
 from parser import get_args
 
 
-def letter_index(letter, alphabet=string.ascii_lowercase):
+def letter_index(letter : str, alphabet : str = string.ascii_lowercase) -> int:
     return alphabet.index(letter)
 
 
-def is_starting(token, alphabet=string.ascii_lowercase):
+def is_starting(token : str, alphabet : str = string.ascii_lowercase) -> bool:
     """
     Determines if the token starts a new word
     """
     return len(token) > 1 and token.startswith(' ') and token[1].lower() in alphabet
 
 
-def is_continuing(token, alphabet=string.ascii_lowercase):
+def is_continuing(token : str, alphabet : str = string.ascii_lowercase) -> bool:
     """
     Determines if the token continue previous word
     """
     return token and not token[0].isspace() and (token[0] in alphabet or token[0].lower() not in alphabet)
 
 
-def get_masks(tokenizer, alphabet=string.ascii_lowercase):
+def get_masks(tokenizer : PreTrainedTokenizer, alphabet : str = string.ascii_lowercase) -> Tuple[Tensor, Tensor]:
     all_tokens = [tokenizer.decode(i) for i in range(tokenizer.vocab_size)]
     mask_allowed = torch.zeros(tokenizer.vocab_size, len(alphabet), dtype=bool)
     mask_starting = torch.zeros(tokenizer.vocab_size, dtype=bool)
@@ -44,7 +46,7 @@ def get_masks(tokenizer, alphabet=string.ascii_lowercase):
     return mask_allowed, mask_starting
 
 
-def target_letters_covered(target, start_tokens, tokenizer):
+def target_letters_covered(target : str, start_tokens : List[int], tokenizer : PreTrainedTokenizer) -> int:
     if not target:
         raise IncorrectInput("Target string cannot be empty")
 
@@ -68,8 +70,8 @@ def target_letters_covered(target, start_tokens, tokenizer):
     return target_letter_generated
 
 
-def generate(target, start_tokens, model, tokenizer,
-             device='cpu', p_threshold=0.95, max_nostarting_token=5, temperature=1.0):
+def generate(target : str, start_tokens : List[int], model : PreTrainedModel, tokenizer : PreTrainedTokenizer,
+             device='cpu', p_threshold : float = 0.95, max_nostarting_token : int = 5, temperature: float = 1.0) -> List[int]:
     target = target.lower()
     tokens = start_tokens.copy()
     with torch.no_grad():

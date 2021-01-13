@@ -1,8 +1,10 @@
 import argparse
 from functools import wraps
+from numbers import Number
+from typing import List, Optional, Type, TypeVar
 
-
-def bounded_number(nmin=None, nmax=None, ntype=int):
+T = TypeVar('T', bound=Number)
+def bounded_number(nmin : Optional[T] = None, nmax : Optional[T] = None, ntype : Type[T] = int) -> T:
     @wraps(ntype)
     def parse(value):
         value = ntype(value)
@@ -14,7 +16,7 @@ def bounded_number(nmin=None, nmax=None, ntype=int):
     return parse
 
 
-def get_args(args=None):
+def get_args(args: Optional[List[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog='denotarikon')
     parser.add_argument('abbrev', help='abbreviature to explain')
     parser.add_argument('initial', nargs='?', default='', help='start generation from this phrase')
