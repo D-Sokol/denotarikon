@@ -15,6 +15,9 @@ def bounded_number(nmin=None, nmax=None, ntype=int):
 
 
 def get_args(args=None):
+    # TODO: write some context
+    _default_context = "Abbreviation list"
+
     parser = argparse.ArgumentParser(prog='denotarikon')
     parser.add_argument('abbrev', help='abbreviature to explain')
     parser.add_argument('initial', nargs='?', default='', help='start generation from this phrase')
@@ -24,6 +27,9 @@ def get_args(args=None):
     model_group.add_argument('--threshold', type=bounded_number(0., 1., ntype=float), default=0.95, metavar='P', help='Probability threshold for nucleus sampling')
     model_group.add_argument('--temperature', type=bounded_number(0., ntype=float), default=1.0, metavar='TEMP')
     model_group.add_argument('--max-tokens', type=bounded_number(0), default=5, help='Maximum number of *tokens* allowed per one letter')
+    context_settings = model_group.add_mutually_exclusive_group()
+    context_settings.add_argument('--context', type=str, default=_default_context, help='Warm-up the model using this text. If none of --context and --no-context is provided, will be used some pre-defined text about abbreviations')
+    context_settings.add_argument('--no-context', action='store_const', const=None, dest='context', help='No warm-up')
 
     device_group = parser.add_argument_group(title='Devices', description='Settings affectnig the devices used for text generation')
     device_group.add_argument('--no-cuda', '--no-gpu', default=True, action='store_false', help='Do not use GPU', dest='use_cuda')
