@@ -69,18 +69,22 @@ def target_letters_covered(target, start_tokens, tokenizer):
 
 
 def generate(target, start_tokens, model, tokenizer,
-             device='cpu', p_threshold=0.95, max_nostarting_token=5, temperature=1.0):
+             device='cpu', p_threshold=0.95, max_nostarting_token=5, temperature=1.0, context_tokens=None):
     target = target.lower()
     tokens = start_tokens.copy()
     with torch.no_grad():
+        past = None
+        if context_tokens is not None:
+            past = model(torch.tensor(context_tokens, device=device)[None])['past_key_values']
+
         mask_allowed, mask_starting = get_masks(tokenizer)
         target_letter_generated = target_letters_covered(target, start_tokens, tokenizer)
         if start_tokens:
-            result = model(torch.tensor(tokens, device=device)[None], past_key_values=None)
+            result = model(torch.tensor(tokens, device=device)[None], past_key_values=past)
             next_logits, past = result['logits'][0, -1, :], result['past_key_values']
             rest_nostarting_tokens = max_nostarting_token
         else:
-            next_logits, past = torch.zeros(tokenizer.vocab_size), None
+            next_logits = torch.zeros(tokenizer.vocab_size)
             rest_nostarting_tokens = 0
 
         while target_letter_generated < len(target):
@@ -122,10 +126,13 @@ if __name__ == '__main__':
 
     try:
         start_tokens = tokenizer.encode(args.initial)
+        context_tokens = tokenizer.encode(args.context) if args.context is not None else None
 
         for i in range(args.repeats):
             tokens = generate(args.abbrev, start_tokens, model, tokenizer,
-                              device=device, p_threshold=args.threshold, max_nostarting_token=args.max_tokens, temperature=args.temperature)
+                              device=device, p_threshold=args.threshold,
+                              max_nostarting_token=args.max_tokens, temperature=args.temperature,
+                              context_tokens=context_tokens)
             print(tokenizer.decode(tokens))
             if i != args.repeats - 1:
                 print('=' * 20)
